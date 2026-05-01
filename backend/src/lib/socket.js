@@ -1,6 +1,8 @@
 import { Server } from "socket.io";
 import http from "http";
 import express from "express";
+import Message from "../models/message.model.js";
+import User from "../models/user.model.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -18,6 +20,28 @@ export function getReceiverSocketId(userId) {
   return userSocketMap[userId];
 }
 
+// ✅ Helper function to calculate unread counts for a user
+async function getUserUnreadCounts(userId) {
+  try {
+    const users = await User.find({ _id: { $ne: userId } }).select("_id");
+    const unreadCounts = {};
+
+    for (const user of users) {
+      const unreadMessages = await Message.countDocuments({
+        senderId: user._id,
+        receiverId: userId,
+        isRead: false,
+      });
+      unreadCounts[user._id] = unreadMessages;
+    }
+
+    return unreadCounts;
+  } catch (error) {
+    console.error("Error calculating unread counts:", error);
+    return {};
+  }
+}
+
 io.on("connection", (socket) => {
   console.log("A user connected", socket.id);
 
@@ -33,6 +57,18 @@ io.on("connection", (socket) => {
   
   // io.emit() is used to send events to all the connected clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
+
+  // ✅ Send initial unread counts when user connects
+  getUserUnreadCounts(userId).then((unreadCounts) => {
+    socket.emit("unreadCounts", unreadCounts);
+  });
+
+  // ✅ Emit unread counts every 1 second
+  const unreadInterval = setInterval(async () => {
+    const unreadCounts = await getUserUnreadCounts(userId);
+    socket.emit("unreadCounts", unreadCounts);
+  }, 1000);
+
   //Typing logic
   socket.on("typing", ({ receiverId }) => {
     const receiverSocketId = userSocketMap[receiverId];
@@ -50,6 +86,7 @@ io.on("connection", (socket) => {
 
   socket.on("disconnect", () => {
     console.log("A user disconnected", socket.id);
+    clearInterval(unreadInterval);
     delete userSocketMap[userId];
     console.log("Online users after disconnect:", Object.keys(userSocketMap));
     io.emit("getOnlineUsers", Object.keys(userSocketMap));

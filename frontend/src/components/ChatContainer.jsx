@@ -30,10 +30,11 @@ const ChatContainer = () => {
   }, [selectedUser?._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
   useEffect(() => {
-    if (messageEndRef.current && messages) {
-      messageEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages, isTyping]);
+    if (!messageEndRef.current) return;
+
+    // Scroll to latest message when the selected chat loads or new messages arrive
+    messageEndRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [messages, selectedUser?._id, isTyping]);
 
   const formatDateLabel = (date) => {
     const msgDate = new Date(date);
@@ -112,7 +113,11 @@ const ChatContainer = () => {
                     />
                   )}
 
-                  {message.text && <p className="pr-10">{message.text}</p>}
+                  {message.text && (
+                    <p className="pr-10 whitespace-pre-wrap break-words">
+                      {message.text}
+                    </p>
+                  )}
 
                   <span className="absolute bottom-1 right-2 text-[10px] opacity-70">
                     {formatMessageTime(message.createdAt)}
