@@ -56,8 +56,14 @@ export const login = async (req,res)=>{
         if(!isPasswordCorrect){
             return res.status(400).json({message: "Invalid Credentials"});
         }
+
+        // ✅ NEW: update lastSeen on login
+        user.lastSeen = new Date();
+        await user.save();
+
         generateToken(user._id,res);
         res.status(201).json(formatUser(user));
+
     } catch (error) {
         console.log("Error in login controller",error.message);
         res.status(500).json({message: "Internal Server Error"});

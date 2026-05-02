@@ -13,14 +13,13 @@ const io = new Server(server, {
   },
 });
 
-// used to store online users
-const userSocketMap = {}; // {userId: socketId}
+const userSocketMap = {};
 
 export function getReceiverSocketId(userId) {
   return userSocketMap[userId];
 }
 
-// ✅ Helper function to calculate unread counts for a user
+// helper
 async function getUserUnreadCounts(userId) {
   try {
     const users = await User.find({ _id: { $ne: userId } }).select("_id");
@@ -42,34 +41,33 @@ async function getUserUnreadCounts(userId) {
   }
 }
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
   console.log("A user connected", socket.id);
 
   const userId = socket.handshake.query.userId;
-  console.log("User ID from query:", userId);
-  
+
   if (userId) {
     userSocketMap[userId] = socket.id;
-    console.log("User added to map:", { userId, socketId: socket.id });
+
+    // ✅ NEW: set user as online (update lastSeen immediately)
+    await User.findByIdAndUpdate(userId, {
+      lastSeen: new Date(),
+    });
   }
 
-  console.log("Current online users:", Object.keys(userSocketMap));
-  
-  // io.emit() is used to send events to all the connected clients
   io.emit("getOnlineUsers", Object.keys(userSocketMap));
 
-  // ✅ Send initial unread counts when user connects
+  // send unread counts
   getUserUnreadCounts(userId).then((unreadCounts) => {
     socket.emit("unreadCounts", unreadCounts);
   });
 
-  // ✅ Emit unread counts every 1 second
   const unreadInterval = setInterval(async () => {
     const unreadCounts = await getUserUnreadCounts(userId);
     socket.emit("unreadCounts", unreadCounts);
   }, 1000);
 
-  //Typing logic
+  // typing
   socket.on("typing", ({ receiverId }) => {
     const receiverSocketId = userSocketMap[receiverId];
     if (receiverSocketId) {
@@ -84,11 +82,20 @@ io.on("connection", (socket) => {
     }
   });
 
-  socket.on("disconnect", () => {
+  socket.on("disconnect", async () => {
     console.log("A user disconnected", socket.id);
+
     clearInterval(unreadInterval);
+
+    // ✅ NEW: update lastSeen on disconnect
+    if (userId) {
+      await User.findByIdAndUpdate(userId, {
+        lastSeen: new Date(),
+      });
+    }
+
     delete userSocketMap[userId];
-    console.log("Online users after disconnect:", Object.keys(userSocketMap));
+
     io.emit("getOnlineUsers", Object.keys(userSocketMap));
   });
 });

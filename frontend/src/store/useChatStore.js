@@ -76,12 +76,6 @@ export const useChatStore = create((set, get) => ({
     if (!socket?.on) return;
 
     socket.off("newMessage");
-    socket.off("unreadCounts");
-
-    // ✅ Listen for unread counts from backend polling every 1 sec
-    socket.on("unreadCounts", (unreadCounts) => {
-      set({ unreadCounts });
-    });
 
     socket.on("newMessage", (newMessage) => {
       const otherUserId =
@@ -135,4 +129,7 @@ export const useChatStore = create((set, get) => ({
 
   setSelectedUser: (selectedUser) =>
     set({ selectedUser }),
+
+  setUnreadCounts: (unreadCounts) =>
+    set({ unreadCounts }),
 }));

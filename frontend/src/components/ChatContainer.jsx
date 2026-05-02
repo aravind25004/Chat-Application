@@ -1,5 +1,5 @@
 import { useChatStore } from "../store/useChatStore";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import ChatHeader from "./ChatHeader";
 import MessageSkeleton from "./skeletons/MessageSkeleton";
 import MessageInput from "./MessageInput";
@@ -19,22 +19,52 @@ const ChatContainer = () => {
   } = useChatStore();
 
   const { authUser } = useAuthStore();
-  const messageEndRef = useRef(null);
+
+  const messagesContainerRef = useRef(null);
+
+  // ✅ Image viewer state
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [zoom, setZoom] = useState(1);
 
   useEffect(() => {
     if (!selectedUser?._id) return;
 
     getMessages(selectedUser._id);
     subscribeToMessages();
+
     return () => unsubscribeFromMessages();
   }, [selectedUser?._id, getMessages, subscribeToMessages, unsubscribeFromMessages]);
 
+  // ✅ Auto scroll
   useEffect(() => {
-    if (!messageEndRef.current) return;
+    if (!messagesContainerRef.current) return;
 
-    // Scroll to latest message when the selected chat loads or new messages arrive
-    messageEndRef.current.scrollIntoView({ behavior: "smooth" });
-  }, [messages, selectedUser?._id, isTyping]);
+    const scrollToBottom = () => {
+      const container = messagesContainerRef.current;
+      if (container) {
+        container.scrollTop = container.scrollHeight;
+      }
+    };
+
+    if (isMessagesLoading) {
+      const timer = setTimeout(scrollToBottom, 200);
+      return () => clearTimeout(timer);
+    } else if (messages.length > 0) {
+      scrollToBottom();
+    }
+  }, [messages, selectedUser?._id, isMessagesLoading, isTyping]);
+
+  // ✅ ESC closes image viewer
+  useEffect(() => {
+    const handleEsc = (e) => {
+      if (e.key === "Escape") {
+        setSelectedImage(null);
+        setZoom(1);
+      }
+    };
+    window.addEventListener("keydown", handleEsc);
+    return () => window.removeEventListener("keydown", handleEsc);
+  }, []);
 
   const formatDateLabel = (date) => {
     const msgDate = new Date(date);
@@ -62,7 +92,10 @@ const ChatContainer = () => {
     <div className="flex-1 flex flex-col overflow-auto">
       <ChatHeader />
 
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div
+        ref={messagesContainerRef}
+        className="flex-1 overflow-y-auto p-4 space-y-4"
+      >
         {messages.map((message, index) => {
           const isMe = message.senderId === authUser._id;
 
@@ -109,7 +142,11 @@ const ChatContainer = () => {
                     <img
                       src={message.image}
                       alt="Attachment"
-                      className="sm:max-w-[200px] rounded-md mb-2"
+                      onClick={() => {
+                        setSelectedImage(message.image);
+                        setZoom(1);
+                      }}
+                      className="sm:max-w-[200px] rounded-md mb-2 cursor-pointer hover:opacity-90 transition"
                     />
                   )}
 
@@ -147,11 +184,74 @@ const ChatContainer = () => {
             </div>
           </div>
         )}
-
-        <div ref={messageEndRef} />
       </div>
 
       <MessageInput />
+
+      {/* ✅ BEAUTIFUL IMAGE VIEWER */}
+      {selectedImage && (
+        <div
+          className="fixed inset-0 bg-black/95 backdrop-blur-sm z-50 flex flex-col"
+          onClick={() => {
+            setSelectedImage(null);
+            setZoom(1);
+          }}
+        >
+          {/* TOP BAR */}
+          <div
+            className="flex justify-end items-center gap-3 p-4"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setZoom((z) => Math.min(z + 0.2, 3))}
+              className="bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded-lg"
+            >
+              +
+            </button>
+
+            <button
+              onClick={() => setZoom((z) => Math.max(z - 0.2, 1))}
+              className="bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded-lg"
+            >
+              −
+            </button>
+
+            <a
+              href={selectedImage}
+              download
+              className="bg-white/10 hover:bg-white/20 text-white px-3 py-1 rounded-lg"
+            >
+              ⬇
+            </a>
+
+            <button
+              onClick={() => {
+                setSelectedImage(null);
+                setZoom(1);
+              }}
+              className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-lg"
+            >
+              ✕
+            </button>
+          </div>
+
+          {/* IMAGE CENTER */}
+          <div
+            className="flex-1 flex items-center justify-center overflow-hidden"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img
+              src={selectedImage}
+              alt="preview"
+              style={{
+                transform: `scale(${zoom})`,
+                transition: "transform 0.2s ease",
+              }}
+              className="max-h-[85vh] max-w-[90vw] object-contain rounded-lg shadow-2xl"
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 };

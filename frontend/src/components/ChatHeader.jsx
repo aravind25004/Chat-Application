@@ -2,11 +2,30 @@ import { X } from "lucide-react";
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 
+// ✅ helper
+const formatLastSeen = (lastSeen) => {
+  if (!lastSeen) return "Offline";
+
+  const now = new Date();
+  const seenTime = new Date(lastSeen);
+
+  const diffSeconds = (now - seenTime) / 1000;
+
+  if (diffSeconds < 60) return "last seen just now";
+
+  return `last seen at ${seenTime.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+};
+
 const ChatHeader = () => {
-  const { selectedUser, setSelectedUser, isTyping, typingUserId } = useChatStore(); // ✅ NEW
+  const { selectedUser, setSelectedUser, isTyping, typingUserId } = useChatStore();
   const { onlineUsers } = useAuthStore();
 
   if (!selectedUser) return null;
+
+  const isOnline = onlineUsers.includes(selectedUser._id);
 
   return (
     <div className="p-2.5 border-b border-base-300">
@@ -24,13 +43,12 @@ const ChatHeader = () => {
           <div>
             <h3 className="font-medium">{selectedUser.fullName}</h3>
 
-            {/* ✅ UPDATED STATUS (typing added) */}
             <p className="text-sm text-base-content/70">
               {isTyping && typingUserId === selectedUser._id
                 ? "Typing..."
-                : onlineUsers.includes(selectedUser._id)
+                : isOnline
                 ? "Online"
-                : "Offline"}
+                : formatLastSeen(selectedUser.lastSeen)}
             </p>
           </div>
         </div>

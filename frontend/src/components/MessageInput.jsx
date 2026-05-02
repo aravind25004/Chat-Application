@@ -19,9 +19,12 @@ const MessageInput = () => {
 
   const typingTimeoutRef = useRef(null);
 
-  const emojis = ["😀","😂","😍","😎","😭","👍","🔥","❤️","🙏","🎉","🖕","✌️","🤚","🤜","🤛","👊","🤝","😓","😅"];
+  const emojis = [
+    "😀","😂","😍","😎","😭","👍","🔥","❤️","🙏","🎉",
+    "🖕","✌️","🤚","🤜","🤛","👊","🤝","😓","😅"
+  ];
 
-  // ✅ Click outside closes emoji
+  // ✅ CLICK OUTSIDE CLOSE EMOJI
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -37,7 +40,7 @@ const MessageInput = () => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // ✅ Auto resize
+  // ✅ AUTO RESIZE TEXTAREA
   const handleResize = () => {
     const el = textareaRef.current;
     if (!el) return;
@@ -45,9 +48,10 @@ const MessageInput = () => {
     el.style.height = el.scrollHeight + "px";
   };
 
+  // ✅ FILE SELECT IMAGE
   const handleImageChange = (e) => {
     const file = e.target.files[0];
-    if (!file.type.startsWith("image/")) {
+    if (!file?.type.startsWith("image/")) {
       toast.error("Please select an image file");
       return;
     }
@@ -56,6 +60,34 @@ const MessageInput = () => {
     reader.onloadend = () => setImagePreview(reader.result);
     reader.readAsDataURL(file);
   };
+
+  // ✅🔥 NEW: PASTE IMAGE SUPPORT
+  useEffect(() => {
+    const handlePaste = (e) => {
+      const items = e.clipboardData.items;
+
+      for (let item of items) {
+        if (item.type.startsWith("image/")) {
+          const file = item.getAsFile();
+
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            setImagePreview(reader.result);
+          };
+          reader.readAsDataURL(file);
+
+          e.preventDefault(); // stop text paste
+          break;
+        }
+      }
+    };
+
+    const textarea = textareaRef.current;
+    if (!textarea) return;
+
+    textarea.addEventListener("paste", handlePaste);
+    return () => textarea.removeEventListener("paste", handlePaste);
+  }, []);
 
   const removeImage = () => {
     setImagePreview(null);
@@ -91,7 +123,7 @@ const MessageInput = () => {
   return (
     <div className="p-3 w-full relative">
 
-      {/* Image preview */}
+      {/* IMAGE PREVIEW */}
       {imagePreview && (
         <div className="mb-2">
           <div className="relative inline-block">
@@ -109,7 +141,7 @@ const MessageInput = () => {
         </div>
       )}
 
-      {/* Emoji Picker (FIXED POSITION) */}
+      {/* EMOJI PICKER */}
       {showEmoji && (
         <div
           ref={emojiRef}
@@ -132,7 +164,7 @@ const MessageInput = () => {
         </div>
       )}
 
-      {/* Input container */}
+      {/* INPUT */}
       <form onSubmit={handleSendMessage}>
         <div className="flex items-end bg-base-200 rounded-2xl px-3 py-2 gap-2">
 
@@ -169,7 +201,7 @@ const MessageInput = () => {
             }}
           />
 
-          {/* Emoji */}
+          {/* EMOJI BUTTON */}
           <button
             ref={emojiBtnRef}
             type="button"
@@ -179,7 +211,7 @@ const MessageInput = () => {
             <Smile size={22} />
           </button>
 
-          {/* Image */}
+          {/* IMAGE BUTTON */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
@@ -188,7 +220,7 @@ const MessageInput = () => {
             <Image size={22} />
           </button>
 
-          {/* Send */}
+          {/* SEND */}
           <button
             type="submit"
             disabled={!text.trim() && !imagePreview}
