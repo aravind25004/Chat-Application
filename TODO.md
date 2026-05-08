@@ -1,6 +1,5 @@
 # Frontend:
   1. A message for empty chat window
-  2. close navigation after clicking settings or profile
 
 # Backend: 
   1. EMail verfication

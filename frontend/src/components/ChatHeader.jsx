@@ -13,10 +13,14 @@ const formatLastSeen = (lastSeen) => {
 
   if (diffSeconds < 60) return "last seen just now";
 
-  return `last seen at ${seenTime.toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit",
-  })}`;
+  if (diffSeconds < 24*60*60)
+      return `last seen at ${seenTime.toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })}`;
+
+  return `last seen at ${seenTime.toLocaleDateString([], { month: "short", day: "numeric", year:"numeric" })} ${seenTime.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`;
+
 };
 
 const ChatHeader = () => {
