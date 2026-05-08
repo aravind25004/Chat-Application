@@ -6,7 +6,7 @@
   2. Username coloum
 
 
- Big FIx:
+# Big FIx:
    1. Search opration 
    2. Invite and accept friends.
    3. Auto sync and notification 
