@@ -1,9 +1,11 @@
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import { LogOut, MessageSquare, Settings, User } from "lucide-react";
+import { useOptionsStore } from "../store/useOptionsStore";
+import { LogOut, MessageSquare, Settings, X , User } from "lucide-react";
 
 const Navbar = () => {
   const { logout, authUser } = useAuthStore();
+  const { opened, setOpened } = useOptionsStore();
 
   return (
     <header
@@ -22,23 +24,47 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-2">
-            <Link
-              to={"/settings"}
-              className={`
-              btn btn-sm gap-2 transition-colors
-              
-              `}
-            >
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Settings</span>
-            </Link>
+            {opened !== 'settings' ? (
+              <Link
+                to={"/settings"}
+                onClick={() => setOpened('settings')}
+                className="btn btn-sm gap-2 transition-colors"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="hidden sm:inline">Settings</span>
+              </Link>
+            ) : (
+              <Link
+                to={"/"}
+                onClick={() => setOpened('')}
+                className="btn btn-sm gap-2"
+              >
+                <X className="size-5" />
+                <span className="hidden sm:inline">Close</span>
+              </Link>
+            )}
 
             {authUser && (
               <>
-                <Link to={"/profile"} className={`btn btn-sm gap-2`}>
-                  <User className="size-5" />
-                  <span className="hidden sm:inline">Profile</span>
-                </Link>
+                {opened !== 'profile' ? (
+                  <Link
+                    to={"/profile"}
+                    onClick={() => setOpened('profile')}
+                    className="btn btn-sm gap-2"
+                  >
+                    <User className="size-5" />
+                    <span className="hidden sm:inline">Profile</span>
+                  </Link>
+                ) : (
+                  <Link
+                    to={"/"}
+                    onClick={() => setOpened('')}
+                    className="btn btn-sm gap-2"
+                  >
+                    <X className="size-5" />
+                    <span className="hidden sm:inline">Close</span>
+                  </Link>
+                )}
 
                 <button className="flex gap-2 items-center" onClick={logout}>
                   <LogOut className="size-5" />
